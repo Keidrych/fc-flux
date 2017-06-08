@@ -1,0 +1,100 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: air-service
+  namespace: int
+  labels:
+    app: altitude
+spec:
+  # replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 30%
+      maxSurge: 10%
+  minReadySeconds: 30
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 300
+  # Selector only necessary when modifying existing deployments
+  # selector:
+  #   matchLabels:
+  #     app: altitude
+  #     tier: air-service
+  template:
+    metadata:
+      labels:
+        app: altitude
+        tier: air-service
+    spec:
+      # Affinity selected based on avaiable node pool or not master pool
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/master
+                    operator: DoesNotExist
+      terminationGracePeriodSeconds: 30
+      # serviceAccount TODO verify if this is relevant for deploys
+      # imagePullSecrets:
+      # volumes:
+      containers:
+      - name: air-service
+        image: quay.io/tayloredtechnology/concourse-grid-discovery:latest
+        env:
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          - name: PRESERVE_JAVA_OPTS
+            value: "true"
+          - name: JAVA_OPTS
+            value: "-Xmx512m -XX:+UseG1GC -server -XX:+AggressiveOpts -XX:+UseFastAccessorMethods"
+        imagePullPolicy: Always
+        #args: []
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /air-service/healthcheck
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /air-service/healthcheck
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          # requests must come first for template generation as limits are optional
+          requests:
+            cpu: 50m
+            memory: 500Mi
+          limits:
+            cpu: 250m
+            memory: 1000Mi
+      imagePullSecrets:
+      - name: regsecret
+      - name: regsecretaz
+      - name: nexus
+      - name: nexus-feature
+      # Restart Policy can only be 'always' (Default) based on setup approach
+      # restartPolicy: Always
