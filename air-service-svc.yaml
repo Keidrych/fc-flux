@@ -1,0 +1,21 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: air-service
+  namespace: int
+  labels:
+    app: altitude
+spec:
+  selector:
+    app: altitude
+    tier: air-service
+  ports:
+    # Service Ports should be named always to disambiguate the endpoints
+  - name: api
+    port: 8080
+    targetPort: 8080
+  - name: management
+    port: 9990
+    targetPort: 9990
+  sessionAffinity: None
+  # type: LoadBalancer
