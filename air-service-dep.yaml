@@ -40,7 +40,7 @@ spec:
       # volumes:
       containers:
       - name: air-service
-        image: quay.io/tayloredtechnology/concourse-grid-discovery:redact
+        image: quay.io/tayloredtechnology/concourse-grid-discovery:another
         env:
           - name: MY_POD_NAME
             valueFrom:
